@@ -1,0 +1,9 @@
+*.tsv
+*.fasta
+*.xz
+*.json
+*.csv
+*.gff
+nextclade_dataset/
+.snakemake/
+.snakemake_timestamp
