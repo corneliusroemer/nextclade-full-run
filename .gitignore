@@ -4,6 +4,8 @@
 *.json
 *.csv
 *.gff
+*.gz
+*.txt
 nextclade_dataset/
 .snakemake/
 .snakemake_timestamp
