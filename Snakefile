@@ -1,7 +1,5 @@
 import os
-# localrules: download_sequences, download_metadata, download_exclude, download_clades, preprocess, download_color_ordering, download_curated_pango, download_pango_aliases
 
-subsample_number = 100
 subsample_ratio = 0.01
 split_number = 8
 
