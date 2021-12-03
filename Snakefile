@@ -3,10 +3,7 @@ import os
 
 subsample_number = 100
 subsample_ratio = 0.01
-split_number = 10
-
-# Filter to list of strain names
-# Filter to pango designated sequences
+split_number = 8
 
 rule all:
     input: "nextclade.tsv"
@@ -57,7 +54,7 @@ rule select_sequences:
 rule subsample_sequences:
     input: rules.select_sequences.output
     output: temp("data/subsample.fasta.gz")
-    shell: "seqkit sample -p {subsample_ratio} -o {output} {input}" 
+    shell: "seqkit sample --force -p {subsample_ratio} -o {output} {input}" 
 
 rule split_sequences:
     input: rules.subsample_sequences.output
@@ -101,3 +98,16 @@ rule collect_nextclade_results:
     input: expand("results/nextclade_results_{part:03d}.tsv", part=range(1,split_number+1))
     output: "nextclade.tsv"
     shell: "cat {input} | dos2unix > {output}"
+
+rule create_classification_table:
+    input:
+        nextclade = rules.collect_nextclade_results.output,
+        pango_designations = rules.normalize_pango_strain_names.output.pango_designations,
+    output: "classification.tsv"
+    params: "pre-processed/pango_designations.tsv"
+    shell:
+        """
+        csv2tsv {input.pango_designations} > {params};
+        tsv-join -H -f {input.nextclade} -k1 -d1 -a2 {params} > {output};
+        rm {params};
+        """
