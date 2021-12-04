@@ -1,8 +1,8 @@
-subsample_ratio = 0.0001
-split_number = 8
+subsample_ratio = 0.001
+split_number = 4
 
 rule all:
-    input: "nextclade.tsv"
+    input: expand("nextclade_{types}.diff",types=["clades","qc","score","alignment","errors"])
 
 rule download_sequences:
     output: "data/sequences.fasta.xz"
@@ -10,7 +10,7 @@ rule download_sequences:
 
 rule subsample_sequences:
     input: rules.download_sequences.output
-    output: temp("data/subsample.fasta.gz")
+    output: "data/subsample.fasta.gz"
     shell: "xz -dc -T0 {input} | seqkit sample -p {subsample_ratio} -o {output}" 
 
 rule split_sequences:
@@ -19,14 +19,14 @@ rule split_sequences:
     params: lambda w: f"data/{w.filename}.fasta.gz"
     shell: 
         """
-        mv {input} {params}; \
+        cp {input} {params}; \
         seqkit split2 {params} -p {split_number} -O split; \
         rm {params}
         """
 
 rule unzip_split:
-    input: "split/designated_subsample.part_{part}.fasta.gz"
-    output: temp("split/designated_subsample.part_{part}.fasta")
+    input: "split/{prefix}_subsample.part_{part}.fasta.gz"
+    output: temp("split/{prefix}_subsample.part_{part}.fasta")
     shell: "gunzip -c {input} > {output}"
 
 rule download_nextclade_dataset:
@@ -40,16 +40,19 @@ rule current_tree:
 
 rule run_nextclade:
     input:
-        sequences = "split/designated_subsample.part_{part}.fasta",
+        sequences = "split/all_subsample.part_{part}.fasta",
         tree = "data/tree_{tree_type}.json",
         dataset = rules.download_nextclade_dataset.output
     output:
         output_tsv = temp("results/nextclade_results_{tree_type}_{part}.tsv"),
     params:
-        output_alignments = "data/alignments_{part}",
+        output_alignments = "data/alignments_{tree_type}_{part}",
+    threads: 4
     shell:
         """
         nextclade run \
+            -j{threads} \
+            --in-order \
             -i {input.sequences} \
             --input-dataset {input.dataset} \
             -a {input.tree} \
@@ -61,4 +64,38 @@ rule run_nextclade:
 rule collect_nextclade_results:
     input: expand("results/nextclade_results_{{tree_type}}_{part:03d}.tsv", part=range(1,split_number+1))
     output: "nextclade_{tree_type}.tsv"
-    shell: "cat {input} | dos2unix > {output}"
+    shell: "keep-header {input} -- cat | dos2unix > {output}"
+
+rule split_nextclade_results:
+    input: "nextclade_{tree_type}.tsv"
+    output:
+        clades = "nextclade_{tree_type}_clades.tsv",
+        qc = "nextclade_{tree_type}_qc.tsv",
+        score = "nextclade_{tree_type}_score.tsv",
+        alignment = "nextclade_{tree_type}_alignment.tsv",
+        errors = "nextclade_{tree_type}_errors.tsv",
+    shell:
+        """
+        tsv-select -H -f seqName,clade {input} > {output.clades};
+        tsv-select -H -f seqName,qc.overallStatus {input} > {output.score};
+        tsv-select -H -f seqName,qc.overallScore,qc.overallStatus,qc.missingData.score,qc.missingData.status,\
+qc.missingData.totalMissing,qc.mixedSites.score,qc.mixedSites.status,qc.mixedSites.totalMixedSites,\
+qc.privateMutations.excess,qc.privateMutations.score,qc.privateMutations.status,qc.privateMutations.total,\
+qc.snpClusters.clusteredSNPs,qc.snpClusters.score,qc.snpClusters.status,qc.snpClusters.totalSNPs,\
+qc.frameShifts.frameShifts,qc.frameShifts.totalFrameShifts,qc.frameShifts.frameShiftsIgnored,\
+qc.frameShifts.totalFrameShiftsIgnored,qc.frameShifts.score,qc.frameShifts.status,qc.stopCodons.stopCodons,\
+qc.stopCodons.totalStopCodons,qc.stopCodons.score,qc.stopCodons.status \
+            {input} > {output.qc};
+        tsv-select -H -f seqName,totalSubstitutions,totalDeletions,totalInsertions,totalFrameShifts,totalAminoacidSubstitutions,\
+totalAminoacidDeletions,totalMissing,totalNonACGTNs,totalPcrPrimerChanges,substitutions,deletions,insertions,\
+frameShifts,aaSubstitutions,aaDeletions,missing,nonACGTNs,pcrPrimerChanges,alignmentScore,alignmentStart,alignmentEnd \
+            {input} > {output.alignment};
+        tsv-select -H -f seqName,errors {input} > {output.errors};
+        """
+
+rule diff:
+    input: 
+        old = "nextclade_old_{analysis}.tsv", 
+        new = "nextclade_new_{analysis}.tsv"
+    output: "nextclade_{analysis}.diff"
+    shell: "diff {input.old} {input.new} >{output}  || true"
