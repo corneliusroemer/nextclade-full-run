@@ -1,0 +1,64 @@
+subsample_ratio = 0.0001
+split_number = 8
+
+rule all:
+    input: "nextclade.tsv"
+
+rule download_sequences:
+    output: "data/sequences.fasta.xz"
+    shell: "aws s3 cp s3://nextstrain-ncov-private/sequences.fasta.xz {output}"
+
+rule subsample_sequences:
+    input: rules.download_sequences.output
+    output: temp("data/subsample.fasta.gz")
+    shell: "xz -dc -T0 {input} | seqkit sample -p {subsample_ratio} -o {output}" 
+
+rule split_sequences:
+    input: rules.subsample_sequences.output
+    output: temp(expand("split/{{filename}}.part_{part:03d}.fasta.gz", part=range(1,split_number+1)))
+    params: lambda w: f"data/{w.filename}.fasta.gz"
+    shell: 
+        """
+        mv {input} {params}; \
+        seqkit split2 {params} -p {split_number} -O split; \
+        rm {params}
+        """
+
+rule unzip_split:
+    input: "split/designated_subsample.part_{part}.fasta.gz"
+    output: temp("split/designated_subsample.part_{part}.fasta")
+    shell: "gunzip -c {input} > {output}"
+
+rule download_nextclade_dataset:
+    output: directory("data/nextclade_dataset")
+    shell: "nextclade dataset get --name='sars-cov-2' --output-dir={output}"
+
+rule current_tree:
+    input: rules.download_nextclade_dataset.output
+    output: "data/tree_old.json"
+    shell: "cp data/nextclade_dataset/tree.json {output}"
+
+rule run_nextclade:
+    input:
+        sequences = "split/designated_subsample.part_{part}.fasta",
+        tree = "data/tree_{tree_type}.json",
+        dataset = rules.download_nextclade_dataset.output
+    output:
+        output_tsv = temp("results/nextclade_results_{tree_type}_{part}.tsv"),
+    params:
+        output_alignments = "data/alignments_{part}",
+    shell:
+        """
+        nextclade run \
+            -i {input.sequences} \
+            --input-dataset {input.dataset} \
+            -a {input.tree} \
+            -t {output.output_tsv} \
+            -d {params.output_alignments};
+        rm -r {params.output_alignments}; \
+        """
+
+rule collect_nextclade_results:
+    input: expand("results/nextclade_results_{{tree_type}}_{part:03d}.tsv", part=range(1,split_number+1))
+    output: "nextclade_{tree_type}.tsv"
+    shell: "cat {input} | dos2unix > {output}"
