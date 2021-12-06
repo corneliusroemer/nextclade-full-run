@@ -47,7 +47,7 @@ rule download_nextclade_dataset:
         binary = "bin/nextclade_new"
     output: directory("data/nextclade_dataset")
     params:
-        binary = "./bin/nextclade_{version}",
+        binary = "./bin/nextclade_new",
     shell: "{params.binary} dataset get --name='sars-cov-2' --output-dir={output}"
 
 rule run_nextclade:
