@@ -99,3 +99,10 @@ rule diff:
         new = "nextclade_new_{analysis}.tsv"
     output: "nextclade_{analysis}.diff"
     shell: "diff {input.old} {input.new} >{output}  || true"
+
+rule clade_changes:
+    input:
+        old = "nextclade_old_clades.tsv",
+        new = "nextclade_new_clades.tsv"
+    output: "sankey.pdf"
+    shell: "python scripts/sankey.py"
