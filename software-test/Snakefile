@@ -1,5 +1,14 @@
-subsample_ratio = 0.001
+subsample_ratio = 0.0001
 split_number = 4
+url = {
+    "old": "https://github.com/nextstrain/nextclade/releases/download/1.5.1/nextclade-Linux-x86_64",
+    "new": "https://1104-271799467-gh.circle-artifacts.com/0/nextclade-Linux-x86_64"
+}
+
+wildcard_constraints:
+    version="[^_]*",
+    part="[^_]*",
+    types="[^_]*",
 
 rule all:
     input: expand("nextclade_{types}.diff",types=["clades","qc","score","alignment","errors"])
@@ -11,7 +20,7 @@ rule download_sequences:
 rule subsample_sequences:
     input: rules.download_sequences.output
     output: "data/subsample.fasta.gz"
-    shell: "xz -dc -T0 {input} | seqkit sample -p {subsample_ratio} -o {output}" 
+    shell: "xz -dc -T0 {input} | seqkit sample -p {subsample_ratio} -o {output}"
 
 rule split_sequences:
     input: rules.subsample_sequences.output
@@ -33,47 +42,46 @@ rule download_nextclade_dataset:
     output: directory("data/nextclade_dataset")
     shell: "nextclade dataset get --name='sars-cov-2' --output-dir={output}"
 
-rule current_tree:
-    input: rules.download_nextclade_dataset.output
-    output: "data/tree_old.json"
-    shell: "cp data/nextclade_dataset/tree.json {output}"
+rule download_nextclade_binary:
+    output: "bin/nextclade_{version}"
+    shell: "curl -L {url[new]} -o {output}; chmod +x {output}"
 
 rule run_nextclade:
     input:
         sequences = "split/all_subsample.part_{part}.fasta",
-        tree = "data/tree_{tree_type}.json",
-        dataset = rules.download_nextclade_dataset.output
+        dataset = rules.download_nextclade_dataset.output,
+        binary = rules.download_nextclade_binary.output
     output:
-        output_tsv = temp("results/nextclade_results_{tree_type}_{part}.tsv"),
+        output_tsv = temp("results/nextclade_results_{version}_{part}.tsv"),
     params:
-        output_alignments = "data/alignments_{tree_type}_{part}",
+        output_alignments = "data/alignments_{version}_{part}",
+        binary = "./bin/nextclade_{version}",
     threads: 4
     shell:
         """
-        nextclade run \
+         {params.binary} run \
             -j{threads} \
             --in-order \
             -i {input.sequences} \
             --input-dataset {input.dataset} \
-            -a {input.tree} \
             -t {output.output_tsv} \
             -d {params.output_alignments};
         rm -r {params.output_alignments}; \
         """
 
 rule collect_nextclade_results:
-    input: expand("results/nextclade_results_{{tree_type}}_{part:03d}.tsv", part=range(1,split_number+1))
-    output: "nextclade_{tree_type}.tsv"
+    input: expand("results/nextclade_results_{{version}}_{part:03d}.tsv", part=range(1,split_number+1))
+    output: "nextclade_{version}.tsv"
     shell: "keep-header {input} -- cat | dos2unix > {output}"
 
 rule split_nextclade_results:
-    input: "nextclade_{tree_type}.tsv"
+    input: "nextclade_{version}.tsv"
     output:
-        clades = "nextclade_{tree_type}_clades.tsv",
-        qc = "nextclade_{tree_type}_qc.tsv",
-        score = "nextclade_{tree_type}_score.tsv",
-        alignment = "nextclade_{tree_type}_alignment.tsv",
-        errors = "nextclade_{tree_type}_errors.tsv",
+        clades = "nextclade_{version}_clades.tsv",
+        qc = "nextclade_{version}_qc.tsv",
+        score = "nextclade_{version}_score.tsv",
+        alignment = "nextclade_{version}_alignment.tsv",
+        errors = "nextclade_{version}_errors.tsv",
     shell:
         """
         tsv-select -H -f seqName,clade {input} > {output.clades};
@@ -94,17 +102,8 @@ frameShifts,aaSubstitutions,aaDeletions,missing,nonACGTNs,pcrPrimerChanges,align
         """
 
 rule diff:
-    input: 
-        old = "nextclade_old_{analysis}.tsv", 
+    input:
+        old = "nextclade_old_{analysis}.tsv",
         new = "nextclade_new_{analysis}.tsv"
     output: "nextclade_{analysis}.diff"
     shell: "diff {input.old} {input.new} >{output}  || true"
-
-rule clade_changes:
-    input:
-        old = "nextclade_old_clades.tsv",
-        new = "nextclade_new_clades.tsv"
-    output: 
-        plot = "sankey.pdf",
-        table = "clade_changes.tsv"
-    shell: "python scripts/sankey.py"

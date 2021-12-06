@@ -9,6 +9,7 @@
 *.pdf
 *.png
 *.diff
+bin/
 nextclade_dataset/
 .snakemake/
 .snakemake_timestamp
