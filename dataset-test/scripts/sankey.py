@@ -31,7 +31,7 @@ share_new = []
 share_all = []
 for index,data in flows.iterrows():
       share_old.append(data[2]/old_count[data[0]])
-      share_new.append(data[2]/new_count[data[0]])
+      share_new.append(data[2]/new_count[data[1]])
       share_all.append(data[2]/count_all)
 #%%
 flows.loc[:,'share_old']=share_old
