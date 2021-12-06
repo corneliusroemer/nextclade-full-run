@@ -38,13 +38,17 @@ rule unzip_split:
     output: temp("split/{prefix}_subsample.part_{part}.fasta")
     shell: "gunzip -c {input} > {output}"
 
-rule download_nextclade_dataset:
-    output: directory("data/nextclade_dataset")
-    shell: "nextclade dataset get --name='sars-cov-2' --output-dir={output}"
-
 rule download_nextclade_binary:
     output: "bin/nextclade_{version}"
     shell: "curl -L {url[new]} -o {output}; chmod +x {output}"
+
+rule download_nextclade_dataset:        
+    input:
+        binary = "bin/nextclade_new"
+    output: directory("data/nextclade_dataset")
+    params:
+        binary = "./bin/nextclade_{version}",
+    shell: "{params.binary} dataset get --name='sars-cov-2' --output-dir={output}"
 
 rule run_nextclade:
     input:
