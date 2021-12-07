@@ -1,9 +1,7 @@
 subsample_ratio = 0.0001
 split_number = 4
-url = {
-    "old": "https://github.com/nextstrain/nextclade/releases/download/1.5.1/nextclade-Linux-x86_64",
-    "new": "https://1104-271799467-gh.circle-artifacts.com/0/nextclade-Linux-x86_64"
-}
+
+localrules: download_nextclade_binary,download_nextclade_dataset,download_sequences
 
 wildcard_constraints:
     version="[^_]*",
@@ -40,7 +38,9 @@ rule unzip_split:
 
 rule download_nextclade_binary:
     output: "bin/nextclade_{version}"
-    shell: "curl -L {url[new]} -o {output}; chmod +x {output}"
+    params:
+        url = lambda w: config["url"][{w.version}]
+    shell: "curl -L {params.url} -o {output}; chmod +x {output}"
 
 rule download_nextclade_dataset:        
     input:
