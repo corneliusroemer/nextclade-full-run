@@ -1,7 +1,6 @@
 *.tsv
 *.fasta
 *.xz
-*.json
 *.csv
 *.gff
 *.gz
@@ -13,3 +12,5 @@ bin/
 nextclade_dataset/
 .snakemake/
 .snakemake_timestamp
+data/
+.vscode/
