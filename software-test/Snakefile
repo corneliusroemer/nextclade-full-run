@@ -1,7 +1,7 @@
-subsample_ratio = 0.0001
-split_number = 4
+subsample_ratio = 0.01
+split_number = 150
 
-localrules: download_nextclade_binary,download_nextclade_dataset,download_sequences
+localrules: diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_binary,download_nextclade_dataset,download_sequences
 
 wildcard_constraints:
     version="[^_]*",
@@ -26,8 +26,8 @@ rule split_sequences:
     params: lambda w: f"data/{w.filename}.fasta.gz"
     shell:
         """
-        cp {input} {params}; \
-        seqkit split2 {params} -p {split_number} -O split; \
+        cp {input} {params} && \
+        seqkit split2 {params} -p {split_number} -O split && \
         rm {params}
         """
 
@@ -86,6 +86,7 @@ rule split_nextclade_results:
         score = "nextclade_{version}_score.tsv",
         alignment = "nextclade_{version}_alignment.tsv",
         errors = "nextclade_{version}_errors.tsv",
+        insertions = "nextclade_{version}_insertions.tsv",
     shell:
         """
         tsv-select -H -f seqName,clade {input} > {output.clades};
@@ -103,6 +104,7 @@ totalAminoacidDeletions,totalMissing,totalNonACGTNs,totalPcrPrimerChanges,substi
 frameShifts,aaSubstitutions,aaDeletions,missing,nonACGTNs,pcrPrimerChanges,alignmentScore,alignmentStart,alignmentEnd \
             {input} > {output.alignment};
         tsv-select -H -f seqName,errors {input} > {output.errors};
+        tsv-select -H -f seqName,insertions {input} > {output.insertions};
         """
 
 rule diff:
