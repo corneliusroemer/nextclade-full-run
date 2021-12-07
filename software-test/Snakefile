@@ -39,7 +39,7 @@ rule unzip_split:
 rule download_nextclade_binary:
     output: "bin/nextclade_{version}"
     params:
-        url = lambda w: config["url"][{w.version}]
+        url = lambda w: config["url"][w.version]
     shell: "curl -L {params.url} -o {output}; chmod +x {output}"
 
 rule download_nextclade_dataset:        
