@@ -1,7 +1,7 @@
 subsample_ratio = 0.1
 split_number = 50
 
-localrules: diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_binary,download_nextclade_dataset,download_sequences
+localrules: subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_binary,download_nextclade_dataset,download_sequences
 
 wildcard_constraints:
     version="[^_]*",
@@ -18,7 +18,7 @@ rule download_sequences:
 rule subsample_sequences:
     input: rules.download_sequences.output
     output: "data/subsample.fasta.gz"
-    shell: "xz -dc -T0 {input} | seqkit sample -p {subsample_ratio} -o {output}"
+    shell: "xz -dc {input} | seqkit sample -p {subsample_ratio} -o {output}"
 
 rule split_sequences:
     input: rules.subsample_sequences.output
