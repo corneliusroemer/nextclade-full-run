@@ -5,5 +5,12 @@
     "n": 1,
     "mem": "32G",
     "conda_env": "nextstrain"
+    },
+    "run_nextclade": {
+    "time": "00:29:00",
+    "qos": "30min",
+    "n": 8,
+    "mem": "32G",
+    "conda_env": "nextstrain"
     }
 }

@@ -1,5 +1,5 @@
-subsample_ratio = 0.01
-split_number = 150
+subsample_ratio = 0.1
+split_number = 50
 
 localrules: diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_binary,download_nextclade_dataset,download_sequences
 
@@ -9,7 +9,7 @@ wildcard_constraints:
     types="[^_]*",
 
 rule all:
-    input: expand("nextclade_{types}.diff",types=["clades","qc","score","alignment","errors"])
+    input: expand("nextclade_{types}.diff",types=["clades","qc","score","alignment","errors","insertions"])
 
 rule download_sequences:
     output: "data/sequences.fasta.xz"
@@ -60,7 +60,7 @@ rule run_nextclade:
     params:
         output_alignments = "data/alignments_{version}_{part}",
         binary = "./bin/nextclade_{version}",
-    threads: 4
+    threads: 8
     shell:
         """
          {params.binary} run \
