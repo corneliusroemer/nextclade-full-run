@@ -105,6 +105,5 @@ rule clade_changes:
         old = "nextclade_old_clades.tsv",
         new = "nextclade_new_clades.tsv"
     output: 
-        plot = "sankey.pdf",
         table = "clade_changes.tsv"
     shell: "python scripts/sankey.py"

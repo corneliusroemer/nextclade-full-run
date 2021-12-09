@@ -1,9 +1,6 @@
 #%%
 import pandas as pd
 import pandas as pd
-from pysankey2.utils import setColorConf
-from pysankey2 import Sankey
-import matplotlib.pyplot as plt
 
 
 #%%
@@ -40,10 +37,3 @@ flows.loc[:,'share_all']=share_all
 #%%
 flows[flows['clade_old'] != flows['clade_new']].to_csv('clade_changes.tsv', sep='\t',float_format='%.2g')
 #%%
-df_old.value_counts()
-#%%
-#%%
-sky = Sankey(df)
-fig,ax = sky.plot()
-plt.gcf().set_size_inches(10,10)
-plt.savefig('sankey.pdf', bbox_inches='tight',transparent=False) # to save
