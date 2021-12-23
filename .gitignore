@@ -14,3 +14,4 @@ nextclade_dataset/
 .snakemake_timestamp
 data/
 .vscode/
+.DS_Store

@@ -1,50 +1,31 @@
 #%%
 import pandas as pd
-import plotly.graph_objects as go
 import pandas as pd
-from pysankey import sankey
-import matplotlib.pyplot as plt
 
 #%%
-df = pd.read_csv('classification.tsv', sep='\t')
+df = pd.read_csv('pango-benchmark/classification.tsv', header=0 ,sep='\t', names=['truth', 'pred'])
 
 #%%
 # Count all unique pairs
-flows = df.groupby(['lineage', 'clade']).size()
+flows = pd.DataFrame(df.groupby(['truth', 'pred']).size(),columns=['count'])
+flows.reset_index(inplace=True)
 #%%
-a = flows.index.get_level_values(0)
-b = flows.index.get_level_values(1)
-weight = list(flows)
+old_count = df.truth.value_counts()
+new_count = df.pred.value_counts()
+count_all = old_count.sum()
+#%% 
+share_old = []
+share_new = []
+share_all = []
+for index,data in flows.iterrows():
+      share_old.append(data[2]/old_count[data[0]])
+      share_new.append(data[2]/new_count[data[1]])
+      share_all.append(data[2]/count_all)
 #%%
-lineage = set(flows.index.get_level_values('lineage').unique())
-clade = set(flows.index.get_level_values('clade').unique())
-labels = list(lineage.union(clade))
-joint_lookup = {k: v for v, k in enumerate(labels)}
-
-
+flows.loc[:,'share_old']=share_old
+flows.loc[:,'share_new']=share_new
+flows.loc[:,'share_all']=share_all
 #%%
-fig = go.Figure(data=[go.Sankey(
-    node = dict(
-      pad = 15,
-      thickness = 20,
-      line = dict(color = "black", width = 0.5),
-      label = labels,
-      color = "blue"
-    ),
-    link = dict(
-      source = list(map(joint_lookup.get,lineage)), # indices correspond to labels, eg A1, A2, A1, B1, ...
-      target = list(map(joint_lookup.get,clade)),
-      value = list(flows),
-  ))])
-
-fig.update_layout(title_text="Basic Sankey Diagram", font_size=10)
-fig.show()
-# %%
-# %%
-ax = sankey(
-      left=a[:300], right=b[:300],
-      rightWeight=weight[:300], leftWeight=weight[:300], fontsize=20
-)
-plt.gcf().set_size_inches(40,40)
-plt.savefig('sankey.pdf', bbox_inches='tight',transparent=False) # to save
-# %%
+# flows[flows['clade_old'] != flows['clade_new']].to_csv('clade_changes.tsv', sep='\t',float_format='%.2g')
+flows[flows.truth == flows.pred].sort_values(by='count',ascending=False).to_csv('correct_clades.tsv', sep='\t',float_format='%.2g',index=False)
+flows[flows.truth != flows.pred].sort_values(by='count',ascending=False).to_csv('wrong_clades.tsv', sep='\t',float_format='%.2g',index=False)
