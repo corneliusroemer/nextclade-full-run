@@ -1,7 +1,7 @@
 subsample_ratio = 0.1
 split_number = 500
 
-localrules: clean,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_binary,download_nextclade_dataset,download_sequences
+localrules: clean,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_dataset,download_sequences
 
 rule all:
     input: 
@@ -99,18 +99,18 @@ frameShifts,aaSubstitutions,aaDeletions,missing,nonACGTNs,pcrPrimerChanges,align
 
 rule diff:
     input: 
-        old = "nextclade_old_{analysis}.tsv", 
-        new = "nextclade_new_{analysis}.tsv"
+        old = "results/nextclade_old_{analysis}.tsv", 
+        new = "results/nextclade_new_{analysis}.tsv"
     output: "results/nextclade_{analysis}.diff"
     shell: "diff {input.old} {input.new} >{output}  || true"
 
 rule clade_changes:
     input:
-        old = "nextclade_old_clades.tsv",
-        new = "nextclade_new_clades.tsv"
+        old = "results/nextclade_old_clades.tsv",
+        new = "results/nextclade_new_clades.tsv"
     output: 
         table = "results/clade_changes.tsv"
     shell: "python scripts/sankey.py"
 
 rule clean:
-    shell: "rm log/* *.diff *.tsv; rm -r results data bin logs split"
+    shell: "rm log/* *.diff *.tsv; rm -r results data/nextclade_dataset bin logs split"
