@@ -1,5 +1,5 @@
-subsample_ratio = 0.001
-split_number = 4
+subsample_ratio = 0.1
+split_number = 500
 
 rule all:
     input: expand("nextclade_{types}.diff",types=["clades","qc","score","alignment","errors"])
@@ -69,11 +69,11 @@ rule collect_nextclade_results:
 rule split_nextclade_results:
     input: "nextclade_{tree_type}.tsv"
     output:
-        clades = "nextclade_{tree_type}_clades.tsv",
-        qc = "nextclade_{tree_type}_qc.tsv",
-        score = "nextclade_{tree_type}_score.tsv",
-        alignment = "nextclade_{tree_type}_alignment.tsv",
-        errors = "nextclade_{tree_type}_errors.tsv",
+        clades = "results/nextclade_{tree_type}_clades.tsv",
+        qc = "results/nextclade_{tree_type}_qc.tsv",
+        score = "results/nextclade_{tree_type}_score.tsv",
+        alignment = "results/nextclade_{tree_type}_alignment.tsv",
+        errors = "results/nextclade_{tree_type}_errors.tsv",
     shell:
         """
         tsv-select -H -f seqName,clade {input} > {output.clades};
@@ -97,7 +97,7 @@ rule diff:
     input: 
         old = "nextclade_old_{analysis}.tsv", 
         new = "nextclade_new_{analysis}.tsv"
-    output: "nextclade_{analysis}.diff"
+    output: "results/nextclade_{analysis}.diff"
     shell: "diff {input.old} {input.new} >{output}  || true"
 
 rule clade_changes:
@@ -105,5 +105,5 @@ rule clade_changes:
         old = "nextclade_old_clades.tsv",
         new = "nextclade_new_clades.tsv"
     output: 
-        table = "clade_changes.tsv"
+        table = "results/clade_changes.tsv"
     shell: "python scripts/sankey.py"
