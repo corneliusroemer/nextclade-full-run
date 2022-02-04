@@ -1,8 +1,12 @@
 subsample_ratio = 0.1
 split_number = 500
 
+localrules: clean,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_binary,download_nextclade_dataset,download_sequences
+
 rule all:
-    input: expand("nextclade_{types}.diff",types=["clades","qc","score","alignment","errors"])
+    input: 
+        expand("results/nextclade_{types}.diff",types=["clades","qc","score","alignment","errors"]),
+        "results/clade_changes.tsv",
 
 rule download_sequences:
     output: "data/sequences.fasta.xz"
@@ -107,3 +111,6 @@ rule clade_changes:
     output: 
         table = "results/clade_changes.tsv"
     shell: "python scripts/sankey.py"
+
+rule clean:
+    shell: "rm log/* *.diff *.tsv; rm -r results data bin logs split"
