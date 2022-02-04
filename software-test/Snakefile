@@ -1,7 +1,7 @@
 subsample_ratio = 0.1
 split_number = 50
 
-localrules: subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_binary,download_nextclade_dataset,download_sequences
+localrules: clean,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_binary,download_nextclade_dataset,download_sequences
 
 wildcard_constraints:
     version="[^_]*",
@@ -120,3 +120,7 @@ rule wdiff:
         new = "nextclade_new_{analysis}.tsv"
     output: "results/nextclade_{analysis}.wdiff"
     shell: "wdiff {input.old} {input.new} >{output}  || true"
+
+rule clean:
+    shell: "rm log/* *.diff *.tsv; rm -r results data bin logs split"
+
