@@ -139,7 +139,7 @@ rule join_usher_clades:
 rule join_pangolearn_usher_clades:
     input:
         pangolearn="pangolearn.csv",
-        joined="nextclade_clades.tsv",
+        joined="usher_clades.tsv",
     output:
         joined="pangolearn_usher_clades.tsv"
     shell:
