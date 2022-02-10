@@ -4,7 +4,8 @@ split_number = 5
 localrules: clean,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_dataset,download_sequences
 
 rule all:
-    input: "usher.csv","nextclade_clades.tsv"
+    input: "usher.csv","nextclade_clades.tsv", "pangolearn.csv",
+        "usher_clades_meta.tsv"
 
 rule download_sequences:
     output: "data/sequences.fasta.xz"
@@ -58,7 +59,7 @@ rule run_nextclade:
     input:
         sequences = "split/all_subsample.part_{part}.fasta",
         tree = "data/tree.json",
-        dataset = rules.download_nextclade_dataset.output
+        dataset = rules.download_nextclade_dataset.output.out_dir
     output:
         output_tsv = temp("results/nextclade_results_{part}.tsv"),
     params:
@@ -99,6 +100,21 @@ rule collect_usher_results:
     output: "usher.csv"
     shell: "keep-header {input} -- cat | dos2unix > {output}"
 
+rule run_pangolearn:
+    input:
+        sequences = "split/all_subsample.part_{part}.fasta",
+    output:
+        assignments = temp("results/pango_pangolearn_{part}.csv")
+    threads: 4
+    shell:
+        """
+        pangolin {input.sequences} --outfile {output.assignments} --skip-designation-hash --threads={threads} 2>&1
+        """
+
+rule collect_pangolearn_results:
+    input: expand("results/pango_pangolearn_{part:03d}.csv", part=range(1,split_number+1))
+    output: "pangolearn.csv"
+    shell: "keep-header {input} -- cat | dos2unix > {output}"
 
 rule split_nextclade_results:
     input: "nextclade.tsv"
@@ -108,6 +124,44 @@ rule split_nextclade_results:
         """
         tsv-select -H -f seqName,clade,inferred_lineage {input} > {output.clades};
         """
+
+rule join_usher_clades:
+    input:
+        usher="usher.csv",
+        clades="nextclade_clades.tsv",
+    output:
+        joined="usher_clades.tsv"
+    shell:
+        """
+        csv2tsv {input.usher} | tsv-join -H -f {input.clades} -k1 -a 1-3 > {output.joined}
+        """
+
+rule join_pangolearn_usher_clades:
+    input:
+        pangolearn="pangolearn.csv",
+        joined="nextclade_clades.tsv",
+    output:
+        joined="pangolearn_usher_clades.tsv"
+    shell:
+        """
+        csv2tsv {input.pangolearn} | tsv-join -H -f {input.joined} -k1 -a 1-7 > {output.joined}
+        """
+
+rule join_meta:
+    input:
+        joined = "pangolearn_usher_clades.tsv",
+        meta = "data/metadata.tsv.gz",
+    output:
+        joined = "usher_clades_meta.tsv"
+    shell:
+        """
+        gzip -cd {input.meta} | tsv-join -H -f {input.joined} -k1 -a 1-7 > {output.joined}
+        """
+
+# Calculate agreement (with consensus)
+# Add pango designations to metadata
+# Sample from designations only
+# Run pangoLEARN skipping designations
 
 rule clean:
     shell: "rm log/* *.diff *.tsv; rm -r results data/nextclade_dataset bin logs split"

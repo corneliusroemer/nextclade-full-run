@@ -19,5 +19,12 @@
         "n": 4,
         "mem": "32G",
         "conda_env": "pangolin"
+    },
+    "run_pangolearn": {
+        "time": "00:29:00",
+        "qos": "30min",
+        "n": 4,
+        "mem": "32G",
+        "conda_env": "pangolin"
     }
 }
