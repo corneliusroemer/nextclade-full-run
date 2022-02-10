@@ -1,0 +1,95 @@
+subsample_ratio = 0.001
+split_number = 5
+
+localrules: clean,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_dataset,download_sequences
+
+rule all:
+    input: "usher.csv","nextclade_clades.tsv"
+
+rule download_sequences:
+    output: "data/sequences.fasta.xz"
+    shell: "aws s3 cp s3://nextstrain-ncov-private/sequences.fasta.xz {output}"
+
+rule subsample_sequences:
+    input: rules.download_sequences.output
+    output: "data/subsample.fasta.gz"
+    shell: "xz -dc -T0 {input} | seqkit sample -p {subsample_ratio} -o {output}" 
+
+rule split_sequences:
+    input: rules.subsample_sequences.output
+    output: temp(expand("split/{{filename}}.part_{part:03d}.fasta.gz", part=range(1,split_number+1)))
+    params: lambda w: f"data/{w.filename}.fasta.gz"
+    shell:
+        """
+        cp {input} {params}; \
+        seqkit split2 {params} -p {split_number} -O split; \
+        rm {params}
+        """
+
+rule unzip_split:
+    input: "split/{prefix}_subsample.part_{part}.fasta.gz"
+    output: temp("split/{prefix}_subsample.part_{part}.fasta")
+    shell: "gunzip -c {input} > {output}"
+
+rule download_nextclade_dataset:
+    output: directory("data/nextclade_dataset")
+    shell: "nextclade dataset get --name='sars-cov-2' --output-dir={output}"
+
+# Need to add meta field to infer lineages
+
+rule run_nextclade:
+    input:
+        sequences = "split/all_subsample.part_{part}.fasta",
+        tree = "tree.json",
+        dataset = rules.download_nextclade_dataset.output
+    output:
+        output_tsv = temp("results/nextclade_results_{part}.tsv"),
+    params:
+        output_alignments = "data/alignments_{part}",
+    threads: 4
+    shell:
+        """
+        nextclade run \
+            -j{threads} \
+            --in-order \
+            -i {input.sequences} \
+            --input-dataset {input.dataset} \
+            -a {input.tree} \
+            -t {output.output_tsv} \
+            -d {params.output_alignments};
+        rm -r {params.output_alignments}; \
+        """
+
+rule collect_nextclade_results:
+    input: expand("results/nextclade_results_{part:03d}.tsv", part=range(1,split_number+1))
+    output: "nextclade.tsv"
+    shell: "keep-header {input} -- cat | dos2unix > {output}"
+
+
+rule run_usher:
+    input:
+        sequences = "split/all_subsample.part_{part}.fasta",
+    output:
+        assignments = temp("results/pango_usher_{part}.csv")
+    shell:
+        """
+        pangolin {input.sequences} --usher --outfile {output.assignments} 2>&1
+        """
+
+rule collect_usher_results:
+    input: expand("results/pango_usher_{part:03d}.csv", part=range(1,split_number+1))
+    output: "usher.csv"
+    shell: "keep-header {input} -- cat | dos2unix > {output}"
+
+
+rule split_nextclade_results:
+    input: "nextclade.tsv"
+    output:
+        clades = "nextclade_clades.tsv",
+    shell:
+        """
+        tsv-select -H -f seqName,clade,inferred_lineage {input} > {output.clades};
+        """
+
+rule clean:
+    shell: "rm log/* *.diff *.tsv; rm -r results data/nextclade_dataset bin logs split"
