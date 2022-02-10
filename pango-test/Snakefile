@@ -144,7 +144,7 @@ rule join_pangolearn_usher_clades:
         joined="pangolearn_usher_clades.tsv"
     shell:
         """
-        csv2tsv {input.pangolearn} | tsv-join -H -f {input.joined} -k1 -a 1-4 | tsv-select -H -f seqName,clade,inferred_lineage,lineage,2 >pangolearn_usher_clades.tsv> {output.joined}
+        csv2tsv {input.pangolearn} | tsv-join -H -f {input.joined} -k1 -a 1-4 --prefix pangolearn | tsv-select -H -f seqName,clade,inferred_lineage,lineage,2 >pangolearn_usher_clades.tsv> {output.joined}
         """
 
 rule join_meta:
