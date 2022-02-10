@@ -10,6 +10,10 @@ rule download_sequences:
     output: "data/sequences.fasta.xz"
     shell: "aws s3 cp s3://nextstrain-ncov-private/sequences.fasta.xz {output}"
 
+rule download_metadata:
+    output: "data/metadata.tsv.gz"
+    shell: "aws s3 cp s3://nextstrain-ncov-private/metadata.tsv.gz {output}"
+
 rule subsample_sequences:
     input: rules.download_sequences.output
     output: "data/subsample.fasta.gz"
@@ -32,15 +36,28 @@ rule unzip_split:
     shell: "gunzip -c {input} > {output}"
 
 rule download_nextclade_dataset:
-    output: directory("data/nextclade_dataset")
-    shell: "nextclade dataset get --name='sars-cov-2' --output-dir={output}"
+    output: 
+        out_dir=directory("data/nextclade_dataset"),
+        tree="data/nextclade_dataset/tree.json",
+    shell: "nextclade dataset get --name='sars-cov-2' --output-dir={output.out_dir}"
 
 # Need to add meta field to infer lineages
+rule add_custom_node_attr_to_meta:
+    input:
+        auspice_json= rules.download_nextclade_dataset.output.tree,
+    output:
+        auspice_json= "data/tree.json"
+    shell:
+        """
+        cat {input.auspice_json} | \
+        jq '.meta.extensions.nextclade.clade_node_attrs_keys = ["inferred_lineage"]' \
+        > {output.auspice_json} 2>&1
+        """
 
 rule run_nextclade:
     input:
         sequences = "split/all_subsample.part_{part}.fasta",
-        tree = "tree.json",
+        tree = "data/tree.json",
         dataset = rules.download_nextclade_dataset.output
     output:
         output_tsv = temp("results/nextclade_results_{part}.tsv"),
@@ -71,9 +88,10 @@ rule run_usher:
         sequences = "split/all_subsample.part_{part}.fasta",
     output:
         assignments = temp("results/pango_usher_{part}.csv")
+    threads: 4
     shell:
         """
-        pangolin {input.sequences} --usher --outfile {output.assignments} 2>&1
+        pangolin {input.sequences} --usher --outfile {output.assignments} --skip-designation-hash --threads={threads} 2>&1
         """
 
 rule collect_usher_results:

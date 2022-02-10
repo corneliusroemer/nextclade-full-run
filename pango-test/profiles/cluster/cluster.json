@@ -1,16 +1,23 @@
 {
     "__default__": {
-    "time": "00:29:00",
-    "qos": "30min",
-    "n": 1,
-    "mem": "32G",
-    "conda_env": "nextstrain"
+        "time": "00:29:00",
+        "qos": "30min",
+        "n": 1,
+        "mem": "32G",
+        "conda_env": "nextstrain"
     },
     "run_nextclade": {
-    "time": "00:29:00",
-    "qos": "30min",
-    "n": 4,
-    "mem": "32G",
-    "conda_env": "nextstrain"
+        "time": "00:29:00",
+        "qos": "30min",
+        "n": 4,
+        "mem": "32G",
+        "conda_env": "nextstrain"
+    },
+    "run_usher": {
+        "time": "00:29:00",
+        "qos": "30min",
+        "n": 4,
+        "mem": "32G",
+        "conda_env": "pangolin"
     }
 }
