@@ -1,5 +1,5 @@
-subsample_ratio = 0.001
-split_number = 5
+subsample_ratio = 0.02
+split_number = 100
 
 localrules: clean,download_metadata,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_dataset,download_sequences
 
@@ -144,7 +144,7 @@ rule join_pangolearn_usher_clades:
         joined="pangolearn_usher_clades.tsv"
     shell:
         """
-        csv2tsv {input.pangolearn} | tsv-join -H -f {input.joined} -k1 -a 1-4 --prefix pangolearn | tsv-select -H -f seqName,clade,inferred_lineage,lineage,2 >pangolearn_usher_clades.tsv> {output.joined}
+        csv2tsv {input.pangolearn} | tsv-join -H -f {input.joined} -k1 -a 1-4 | tsv-select -H -f seqName,clade,inferred_lineage,lineage,2 > {output.joined}
         """
 
 rule join_meta:
