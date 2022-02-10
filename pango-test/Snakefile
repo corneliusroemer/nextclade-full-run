@@ -1,7 +1,7 @@
 subsample_ratio = 0.001
 split_number = 5
 
-localrules: clean,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_dataset,download_sequences
+localrules: clean,download_metadata,subsample_sequences,diff,split_nextclade_results,collect_nextclade_results,unzip_split,split_sequences,download_nextclade_dataset,download_sequences
 
 rule all:
     input: "usher.csv","nextclade_clades.tsv", "pangolearn.csv",
@@ -133,7 +133,7 @@ rule join_usher_clades:
         joined="usher_clades.tsv"
     shell:
         """
-        csv2tsv {input.usher} | tsv-join -H -f {input.clades} -k1 -a 1-3 > {output.joined}
+        csv2tsv {input.usher} | tsv-join -H -f {input.clades} -k1 -a 1-3 | tsv-select -H -f seqName,clade,inferred_lineage,2 > {output.joined}
         """
 
 rule join_pangolearn_usher_clades:
@@ -144,7 +144,7 @@ rule join_pangolearn_usher_clades:
         joined="pangolearn_usher_clades.tsv"
     shell:
         """
-        csv2tsv {input.pangolearn} | tsv-join -H -f {input.joined} -k1 -a 1-7 > {output.joined}
+        csv2tsv {input.pangolearn} | tsv-join -H -f {input.joined} -k1 -a 1-4 | tsv-select -H -f seqName,clade,inferred_lineage,lineage,2 >pangolearn_usher_clades.tsv> {output.joined}
         """
 
 rule join_meta:
@@ -155,7 +155,7 @@ rule join_meta:
         joined = "usher_clades_meta.tsv"
     shell:
         """
-        gzip -cd {input.meta} | tsv-join -H -f {input.joined} -k1 -a 1-7 > {output.joined}
+        gzip -cd {input.meta} | tsv-join -H -f {input.joined} -k1 -a 1-5 > {output.joined}
         """
 
 # Calculate agreement (with consensus)
