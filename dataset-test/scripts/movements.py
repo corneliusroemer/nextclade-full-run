@@ -42,5 +42,5 @@ for key in ['clade','Nextclade_pango','qc.overallStatus']:
       flows.loc[:,'share_new']=share_new
       flows.loc[:,'share_all']=share_all
       #%%
-      flows[flows[key_old] != flows[key_new]].to_csv(key + '_changes.tsv', sep='\t',float_format='%.2g', index=False)
+      flows[flows[key_old] != flows[key_new]].to_csv('results/' + key + '_changes.tsv', sep='\t',float_format='%.2g', index=False)
 #%%

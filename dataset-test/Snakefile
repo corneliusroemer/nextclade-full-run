@@ -106,11 +106,13 @@ rule diff:
 
 rule clade_changes:
     input:
-        old = "results/nextclade_old_clades.tsv",
-        new = "results/nextclade_new_clades.tsv"
+        old = "nextclade_old.tsv",
+        new = "nextclade_new.tsv"
     output: 
-        table = "results/clade_changes.tsv"
-    shell: "python scripts/sankey.py"
+        clade = "results/clade_changes.tsv"
+        pango = "results/Nextclade_pango_changes.tsv"
+        qc = "results/qc.overallStatus_changes.tsv"
+    shell: "python scripts/movements.py"
 
 rule clean:
     shell: "rm log/* *.diff *.tsv; rm -r results data/nextclade_dataset bin logs split"
